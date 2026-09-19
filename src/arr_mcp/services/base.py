@@ -64,7 +64,7 @@ class BaseArrClient:
         
             self._client = httpx.AsyncClient(
                 base_url=self.base_url,
-                headers={"X-Api-Key": self.api_key},
+                headers=headers,
                 timeout=self.timeout,
             )
         return self._client
