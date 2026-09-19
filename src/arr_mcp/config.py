@@ -94,6 +94,7 @@ class ArrConfig(BaseModel):
                 url=os.getenv("RADARR_URL", ""),
                 api_key=os.getenv("RADARR_API_KEY", ""),
                 enabled=os.getenv("RADARR_ENABLED", "false").lower() == "true",
+                header_auth=os.getenv("RADARR_HEADER_AUTH", "")
             ),
             sonarr=ArrServiceConfig(
                 url=os.getenv("SONARR_URL", ""),
