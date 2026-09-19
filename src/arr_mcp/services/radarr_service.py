@@ -23,6 +23,7 @@ class RadarrClient(BaseArrClient):
             name="Radarr",
             base_url=base_url,
             api_key=api_key,
+            radarr_header_auth=RADARR_HEADER_AUTH,
             api_path=RADARR_API_PATH,
             timeout=timeout,
         )
