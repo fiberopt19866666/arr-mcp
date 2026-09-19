@@ -10,6 +10,9 @@ class ArrServiceConfig(BaseModel):
     url: str = ""
     api_key: str = ""
     enabled: bool = False
+    cloudflare_access_client_id: str = ""
+    cloudflare_access_client_secret: str = ""
+    
 
     @property
     def is_configured(self) -> bool:
@@ -94,7 +97,8 @@ class ArrConfig(BaseModel):
                 url=os.getenv("RADARR_URL", ""),
                 api_key=os.getenv("RADARR_API_KEY", ""),
                 enabled=os.getenv("RADARR_ENABLED", "false").lower() == "true",
-                header_auth=os.getenv("RADARR_HEADER_AUTH", "")
+                cloudflare_access_client_id=os.getenv("CF_ACCESS_CLIENT_ID", ""),
+                cloudflare_access_client_secret=os.getenv("CF_ACCESS_CLIENT_SECRET", ""),
             ),
             sonarr=ArrServiceConfig(
                 url=os.getenv("SONARR_URL", ""),
