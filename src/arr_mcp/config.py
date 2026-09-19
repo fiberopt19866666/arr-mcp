@@ -10,9 +10,6 @@ class ArrServiceConfig(BaseModel):
     url: str = ""
     api_key: str = ""
     enabled: bool = False
-    cloudflare_access_client_id: str = ""
-    cloudflare_access_client_secret: str = ""
-    
 
     @property
     def is_configured(self) -> bool:
@@ -74,6 +71,8 @@ class ArrConfig(BaseModel):
     sampling: SamplingConfig = Field(default_factory=SamplingConfig)
     log_level: str = Field(default="INFO")
     timeout: int = Field(default=30)
+    cloudflare_access_client_id: str = Field(default="")
+    cloudflare_access_client_secret: str = Field(default="")
 
     @field_validator("timeout", mode="before")
     @classmethod
@@ -97,8 +96,6 @@ class ArrConfig(BaseModel):
                 url=os.getenv("RADARR_URL", ""),
                 api_key=os.getenv("RADARR_API_KEY", ""),
                 enabled=os.getenv("RADARR_ENABLED", "false").lower() == "true",
-                cloudflare_access_client_id=os.getenv("CF_ACCESS_CLIENT_ID", ""),
-                cloudflare_access_client_secret=os.getenv("CF_ACCESS_CLIENT_SECRET", ""),
             ),
             sonarr=ArrServiceConfig(
                 url=os.getenv("SONARR_URL", ""),
@@ -155,4 +152,6 @@ class ArrConfig(BaseModel):
             ),
             log_level=os.getenv("ARR_LOG_LEVEL", "INFO"),
             timeout=int(os.getenv("ARR_TIMEOUT", "30")),
+            cloudflare_access_client_id=os.getenv("CF_ACCESS_CLIENT_ID", ""),
+            cloudflare_access_client_secret=os.getenv("CF_ACCESS_CLIENT_SECRET", ""),
         )

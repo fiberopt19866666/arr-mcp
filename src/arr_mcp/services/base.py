@@ -15,6 +15,16 @@ from arr_mcp.constants import DEFAULT_TIMEOUT
 logger = logging.getLogger(__name__)
 
 
+def build_cloudflare_access_auth(client_id: str, client_secret: str) -> dict[str, str]:
+    """Build Cloudflare Access service-token headers, omitting empty values."""
+    auth: dict[str, str] = {}
+    if client_id:
+        auth["CF-Access-Client-Id"] = client_id
+    if client_secret:
+        auth["CF-Access-Client-Secret"] = client_secret
+    return auth
+
+
 class BaseArrClient:
     """Shared httpx AsyncClient for *arr REST APIs.
 
@@ -44,24 +54,23 @@ class BaseArrClient:
         api_key: str,
         api_path: str,
         timeout: int = DEFAULT_TIMEOUT,
-        cloudflare_access_auth: dict[str, str] | None = None,  # NEW
+        cloudflare_access_auth: dict[str, str] | None = None,
     ) -> None:
         self.name = name
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.api_path = api_path
         self.timeout = timeout
-        self.cloudflare_access_auth = cloudflare_access_auth  # NEW
+        self.cloudflare_access_auth = cloudflare_access_auth
         self._client: httpx.AsyncClient | None = None
 
     async def _ensure_client(self) -> httpx.AsyncClient:
         if self._client is None or self._client.is_closed:
-            headers = {  # NEW
-            "X-Api-Key": self.api_key,
-        }
-            if self.cloudflare_access_auth:  # NEW
-                headers.update(self.cloudflare_access_auth)  # NEW
-        
+            headers: dict[str, str] = {
+                "X-Api-Key": self.api_key,
+            }
+            if self.cloudflare_access_auth:
+                headers.update(self.cloudflare_access_auth)
             self._client = httpx.AsyncClient(
                 base_url=self.base_url,
                 headers=headers,

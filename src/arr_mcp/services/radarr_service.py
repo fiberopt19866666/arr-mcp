@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Any
 
 from arr_mcp.constants import DEFAULT_TIMEOUT, RADARR_API_PATH
-from arr_mcp.services.base import BaseArrClient
+from arr_mcp.services.base import BaseArrClient, build_cloudflare_access_auth
 
 
 class RadarrClient(BaseArrClient):
@@ -27,10 +27,10 @@ class RadarrClient(BaseArrClient):
             api_key=api_key,
             api_path=RADARR_API_PATH,
             timeout=timeout,
-            cloudflare_access_auth={
-            "CF-Access-Client-Id": cloudflare_access_client_id,
-            "CF-Access-Client-Secret": cloudflare_access_client_secret,
-            },
+            cloudflare_access_auth=build_cloudflare_access_auth(
+                cloudflare_access_client_id,
+                cloudflare_access_client_secret,
+            ),
         )
 
     # ── movies ────────────────────────────────────────────────────

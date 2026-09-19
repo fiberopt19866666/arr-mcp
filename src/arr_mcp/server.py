@@ -151,34 +151,29 @@ def _create_client(
     client_cls,
     arr_config: ArrConfig,
 ):
+    cf_client_id = arr_config.cloudflare_access_client_id
+    cf_client_secret = arr_config.cloudflare_access_client_secret
+
     if svc_config.is_configured:
         logger.info("%s client created (%s)", name, svc_config.url)
-
-        if name == "Radarr":
-            return client_cls(
-                svc_config.url,
-                svc_config.api_key,
-                arr_config.timeout,
-                svc_config.cloudflare_access_client_id,
-                svc_config.cloudflare_access_client_secret,
-            )
-
-        return client_cls(svc_config.url, svc_config.api_key, arr_config.timeout)
+        return client_cls(
+            svc_config.url,
+            svc_config.api_key,
+            arr_config.timeout,
+            cf_client_id,
+            cf_client_secret,
+        )
 
     if svc_config.api_key and _port_open(default_port):
         url = svc_config.url or f"http://127.0.0.1:{default_port}"
         logger.info("%s auto-discovered at %s (env API key)", name, url)
-
-        if name == "Radarr":
-            return client_cls(
-                url,
-                svc_config.api_key,
-                arr_config.timeout,
-                svc_config.cloudflare_access_client_id,
-                svc_config.cloudflare_access_client_secret,
-            )
-
-        return client_cls(url, svc_config.api_key, arr_config.timeout)
+        return client_cls(
+            url,
+            svc_config.api_key,
+            arr_config.timeout,
+            cf_client_id,
+            cf_client_secret,
+        )
 
     logger.info(
         "%s not configured — tools will be skipped (port %d unreachable or missing API key)",

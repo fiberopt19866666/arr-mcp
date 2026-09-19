@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import Any
 
 from arr_mcp.constants import DEFAULT_TIMEOUT, LIDARR_API_PATH
-from arr_mcp.services.base import BaseArrClient
+from arr_mcp.services.base import BaseArrClient, build_cloudflare_access_auth
 
 
 class LidarrClient(BaseArrClient):
@@ -18,6 +18,8 @@ class LidarrClient(BaseArrClient):
         base_url: str,
         api_key: str,
         timeout: int = DEFAULT_TIMEOUT,
+        cloudflare_access_client_id: str = "",
+        cloudflare_access_client_secret: str = "",
     ) -> None:
         super().__init__(
             name="Lidarr",
@@ -25,6 +27,10 @@ class LidarrClient(BaseArrClient):
             api_key=api_key,
             api_path=LIDARR_API_PATH,
             timeout=timeout,
+            cloudflare_access_auth=build_cloudflare_access_auth(
+                cloudflare_access_client_id,
+                cloudflare_access_client_secret,
+            ),
         )
 
     # ── artists ───────────────────────────────────────────────────

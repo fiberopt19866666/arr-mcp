@@ -50,6 +50,14 @@ class TestArrConfig:
         assert cfg.sonarr.api_key == "sonarr-key"
         assert cfg.sonarr.is_configured is True
 
+    def test_load_cf_tokens_globally(self, monkeypatch):
+        monkeypatch.setenv("CF_ACCESS_CLIENT_ID", "cf-id")
+        monkeypatch.setenv("CF_ACCESS_CLIENT_SECRET", "cf-secret")
+
+        cfg = ArrConfig.load_config()
+        assert cfg.cloudflare_access_client_id == "cf-id"
+        assert cfg.cloudflare_access_client_secret == "cf-secret"  # noqa: S105 - test fixture value, not a real credential
+
     def test_mcp_transport_config(self):
         cfg = ArrConfig()
         assert cfg.transport.transport == "stdio"

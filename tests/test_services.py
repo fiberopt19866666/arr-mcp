@@ -3,8 +3,10 @@
 import pytest
 import pytest_asyncio
 
+from arr_mcp.services.base import build_cloudflare_access_auth
 from arr_mcp.services.bazarr_service import BazarrClient
 from arr_mcp.services.lidarr_service import LidarrClient
+from arr_mcp.services.overseerr_service import OverseerrClient
 from arr_mcp.services.prowlarr_service import ProwlarrClient
 from arr_mcp.services.radarr_service import RadarrClient
 from arr_mcp.services.readarr_service import ReadarrClient
@@ -16,7 +18,10 @@ LIDARR_URL = "http://localhost:8686"
 PROWLARR_URL = "http://localhost:9696"
 READARR_URL = "http://localhost:8787"
 BAZARR_URL = "http://localhost:6767"
+OVERSEERR_URL = "http://localhost:5055"
 API_KEY = "test-api-key"
+CF_ID = "cf-client-id"
+CF_SECRET = "cf-client-secret"  # noqa: S105 - test fixture value, not a real credential
 
 
 @pytest_asyncio.fixture
@@ -276,3 +281,81 @@ class TestBazarrClient:
         )
         providers = await bazarr.get_providers()
         assert len(providers) == 2
+
+
+# ── Cloudflare Access auth ────────────────────────────────────────
+
+
+class TestCloudflareAccessAuth:
+    def test_build_cloudflare_access_auth(self):
+        assert build_cloudflare_access_auth(CF_ID, CF_SECRET) == {
+            "CF-Access-Client-Id": CF_ID,
+            "CF-Access-Client-Secret": CF_SECRET,
+        }
+        assert build_cloudflare_access_auth("", "") == {}
+
+    @pytest.mark.asyncio
+    async def test_sonarr_sends_cf_headers(self, httpx_mock):
+        client = SonarrClient(
+            SONARR_URL,
+            API_KEY,
+            cloudflare_access_client_id=CF_ID,
+            cloudflare_access_client_secret=CF_SECRET,
+        )
+        try:
+            httpx_mock.add_response(url=f"{SONARR_URL}/api/v3/system/status", json={"version": "4.0.0"})
+            await client.health_check()
+            request = httpx_mock.get_requests()[0]
+            assert request.headers["X-Api-Key"] == API_KEY
+            assert request.headers["CF-Access-Client-Id"] == CF_ID
+            assert request.headers["CF-Access-Client-Secret"] == CF_SECRET
+        finally:
+            await client.close()
+
+    @pytest.mark.asyncio
+    async def test_sonarr_no_cf_headers_when_unset(self, httpx_mock):
+        client = SonarrClient(SONARR_URL, API_KEY)
+        try:
+            httpx_mock.add_response(url=f"{SONARR_URL}/api/v3/system/status", json={"version": "4.0.0"})
+            await client.health_check()
+            request = httpx_mock.get_requests()[0]
+            assert "CF-Access-Client-Id" not in request.headers
+            assert "CF-Access-Client-Secret" not in request.headers
+        finally:
+            await client.close()
+
+    @pytest.mark.asyncio
+    async def test_overseerr_sends_cf_headers(self, httpx_mock):
+        client = OverseerrClient(
+            OVERSEERR_URL,
+            API_KEY,
+            cloudflare_access_client_id=CF_ID,
+            cloudflare_access_client_secret=CF_SECRET,
+        )
+        try:
+            httpx_mock.add_response(url=f"{OVERSEERR_URL}/api/v1/status", json={"version": "1.33.0"})
+            await client.health_check()
+            request = httpx_mock.get_requests()[0]
+            assert request.headers["X-Api-Key"] == API_KEY
+            assert request.headers["CF-Access-Client-Id"] == CF_ID
+            assert request.headers["CF-Access-Client-Secret"] == CF_SECRET
+        finally:
+            await client.close()
+
+    @pytest.mark.asyncio
+    async def test_bazarr_sends_cf_headers(self, httpx_mock):
+        client = BazarrClient(
+            BAZARR_URL,
+            API_KEY,
+            cloudflare_access_client_id=CF_ID,
+            cloudflare_access_client_secret=CF_SECRET,
+        )
+        try:
+            httpx_mock.add_response(url=f"{BAZARR_URL}/api/system/status", json={"version": "1.4.0"})
+            await client.health_check()
+            request = httpx_mock.get_requests()[0]
+            assert request.headers["X-Api-Key"] == API_KEY
+            assert request.headers["CF-Access-Client-Id"] == CF_ID
+            assert request.headers["CF-Access-Client-Secret"] == CF_SECRET
+        finally:
+            await client.close()

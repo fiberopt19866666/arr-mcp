@@ -15,6 +15,7 @@ from typing import Any
 import httpx
 
 from arr_mcp.constants import DEFAULT_TIMEOUT
+from arr_mcp.services.base import build_cloudflare_access_auth
 
 
 class OverseerrClient:
@@ -23,18 +24,27 @@ class OverseerrClient:
         base_url: str,
         api_key: str,
         timeout: int = DEFAULT_TIMEOUT,
+        cloudflare_access_client_id: str = "",
+        cloudflare_access_client_secret: str = "",
     ) -> None:
         self.name = "Overseerr"
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.timeout = timeout
+        self.cloudflare_access_auth = build_cloudflare_access_auth(
+            cloudflare_access_client_id,
+            cloudflare_access_client_secret,
+        )
         self._client: httpx.AsyncClient | None = None
 
     async def _ensure_client(self) -> httpx.AsyncClient:
         if self._client is None or self._client.is_closed:
+            headers: dict[str, str] = {"X-Api-Key": self.api_key}
+            if self.cloudflare_access_auth:
+                headers.update(self.cloudflare_access_auth)
             self._client = httpx.AsyncClient(
                 base_url=self.base_url,
-                headers={"X-Api-Key": self.api_key},
+                headers=headers,
                 timeout=self.timeout,
             )
         return self._client
