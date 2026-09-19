@@ -44,12 +44,14 @@ class BaseArrClient:
         api_key: str,
         api_path: str,
         timeout: int = DEFAULT_TIMEOUT,
+        cloudflare_access_auth: dict[str, str] | None = None,  # NEW
     ) -> None:
         self.name = name
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.api_path = api_path
         self.timeout = timeout
+        self.cloudflare_access_auth = cloudflare_access_auth  # NEW
         self._client: httpx.AsyncClient | None = None
 
     async def _ensure_client(self) -> httpx.AsyncClient:
