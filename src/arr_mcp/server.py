@@ -132,16 +132,12 @@ def create_server():
     return mcp, clients, config
     
 def main() -> None:
-    mcp = create_server()
+    mcp, clients, config = create_server()
 
-    config = ArrConfig.load_config()
-    api_router = create_api_router(
-        {},
-        log_buffer=LOG_BUFFER,
-    )
+    api_router = create_api_router(clients, log_buffer=LOG_BUFFER)
 
     run_server(mcp, "arr-mcp", api_router=api_router)
-
+    
 def _create_client(
     name: str,
     svc_config,
