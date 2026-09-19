@@ -18,14 +18,19 @@ class RadarrClient(BaseArrClient):
         base_url: str,
         api_key: str,
         timeout: int = DEFAULT_TIMEOUT,
+        cloudflare_access_client_id: str = "",
+        cloudflare_access_client_secret: str = "",
     ) -> None:
         super().__init__(
             name="Radarr",
             base_url=base_url,
             api_key=api_key,
-            radarr_header_auth=RADARR_HEADER_AUTH,
             api_path=RADARR_API_PATH,
             timeout=timeout,
+            cloudflare_access_auth={
+            "CF-Access-Client-Id": cloudflare_access_client_id,
+            "CF-Access-Client-Secret": cloudflare_access_client_secret,
+            },
         )
 
     # ── movies ────────────────────────────────────────────────────
