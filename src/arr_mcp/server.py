@@ -129,7 +129,7 @@ def create_server():
     registered_count = sum(1 for c in clients.values() if c is not None)
     logger.info("Registered tools for %d/%d services", registered_count, len(clients))
 
-    return mcp
+    return mcp, clients, config
     
 def main() -> None:
     mcp = create_server()
