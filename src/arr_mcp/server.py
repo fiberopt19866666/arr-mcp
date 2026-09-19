@@ -82,11 +82,13 @@ def setup_logging(log_level: str = "INFO") -> None:
     logging.getLogger("uvicorn").setLevel(logging.WARNING)
 
 
-def main() -> None:
+def create_server():
     config = ArrConfig.load_config()
+
     setup_logging(config.log_level)
 
     logger.info("arr-mcp v%s starting", __version__)
+
     logger.info("Auto-discovering *arr services on default ports...")
 
     # ── Build service clients (with auto-discovery) ──────────────
@@ -127,8 +129,7 @@ def main() -> None:
     registered_count = sum(1 for c in clients.values() if c is not None)
     logger.info("Registered tools for %d/%d services", registered_count, len(clients))
 
-    api_router = create_api_router(clients, log_buffer=LOG_BUFFER)
-    run_server(mcp, "arr-mcp", api_router=api_router)
+    return mcp
 
 
 def _create_client(
