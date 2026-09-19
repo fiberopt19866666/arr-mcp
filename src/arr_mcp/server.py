@@ -82,7 +82,7 @@ def setup_logging(log_level: str = "INFO") -> None:
     logging.getLogger("uvicorn").setLevel(logging.WARNING)
 
 
-def create_server():
+def build_server():
     config = ArrConfig.load_config()
 
     setup_logging(config.log_level)
@@ -130,9 +130,15 @@ def create_server():
     logger.info("Registered tools for %d/%d services", registered_count, len(clients))
 
     return mcp, clients, config
+
+def create_server():
+
+    mcp, _, _ = build_server()
+
+    return mcp
     
 def main() -> None:
-    mcp, clients, config = create_server()
+    mcp, clients, config = build_server()
 
     api_router = create_api_router(clients, log_buffer=LOG_BUFFER)
 
