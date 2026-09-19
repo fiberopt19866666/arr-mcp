@@ -153,11 +153,31 @@ def _create_client(
 ):
     if svc_config.is_configured:
         logger.info("%s client created (%s)", name, svc_config.url)
+
+        if name == "Radarr":
+            return client_cls(
+                svc_config.url,
+                svc_config.api_key,
+                arr_config.timeout,
+                svc_config.cloudflare_access_client_id,
+                svc_config.cloudflare_access_client_secret,
+            )
+
         return client_cls(svc_config.url, svc_config.api_key, arr_config.timeout)
 
     if svc_config.api_key and _port_open(default_port):
         url = svc_config.url or f"http://127.0.0.1:{default_port}"
         logger.info("%s auto-discovered at %s (env API key)", name, url)
+
+        if name == "Radarr":
+            return client_cls(
+                url,
+                svc_config.api_key,
+                arr_config.timeout,
+                svc_config.cloudflare_access_client_id,
+                svc_config.cloudflare_access_client_secret,
+            )
+
         return client_cls(url, svc_config.api_key, arr_config.timeout)
 
     logger.info(
