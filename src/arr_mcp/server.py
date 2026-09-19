@@ -130,7 +130,17 @@ def create_server():
     logger.info("Registered tools for %d/%d services", registered_count, len(clients))
 
     return mcp
+    
+def main() -> None:
+    mcp = create_server()
 
+    config = ArrConfig.load_config()
+    api_router = create_api_router(
+        {},
+        log_buffer=LOG_BUFFER,
+    )
+
+    run_server(mcp, "arr-mcp", api_router=api_router)
 
 def _create_client(
     name: str,
