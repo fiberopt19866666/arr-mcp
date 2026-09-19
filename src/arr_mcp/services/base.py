@@ -56,6 +56,12 @@ class BaseArrClient:
 
     async def _ensure_client(self) -> httpx.AsyncClient:
         if self._client is None or self._client.is_closed:
+            headers = {  # NEW
+            "X-Api-Key": self.api_key,
+        }
+            if self.cloudflare_access_auth:  # NEW
+                headers.update(self.cloudflare_access_auth)  # NEW
+        
             self._client = httpx.AsyncClient(
                 base_url=self.base_url,
                 headers={"X-Api-Key": self.api_key},
