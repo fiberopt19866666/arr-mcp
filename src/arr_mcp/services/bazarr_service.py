@@ -18,6 +18,68 @@ import httpx
 from arr_mcp.constants import DEFAULT_TIMEOUT
 from arr_mcp.services.base import build_cloudflare_access_auth
 
+# Bazarr's manual search endpoints (``/api/providers/episodes`` and
+# ``/api/providers/movies``) return results for every language in the media's
+# language profile and do not accept a language filter.  ``language`` is
+# therefore applied client-side using this ISO 639 code → name map.
+_SUBTITLE_LANGUAGE_NAMES: dict[str, str] = {
+    "ar": "arabic",
+    "bg": "bulgarian",
+    "ca": "catalan",
+    "cs": "czech",
+    "da": "danish",
+    "de": "german",
+    "el": "greek",
+    "en": "english",
+    "es": "spanish",
+    "et": "estonian",
+    "fa": "persian",
+    "fi": "finnish",
+    "fr": "french",
+    "he": "hebrew",
+    "hi": "hindi",
+    "hr": "croatian",
+    "hu": "hungarian",
+    "id": "indonesian",
+    "is": "icelandic",
+    "it": "italian",
+    "ja": "japanese",
+    "ko": "korean",
+    "lt": "lithuanian",
+    "lv": "latvian",
+    "ms": "malay",
+    "nb": "norwegian",
+    "nl": "dutch",
+    "no": "norwegian",
+    "pl": "polish",
+    "pt": "portuguese",
+    "ro": "romanian",
+    "ru": "russian",
+    "sk": "slovak",
+    "sl": "slovenian",
+    "sr": "serbian",
+    "sv": "swedish",
+    "th": "thai",
+    "tr": "turkish",
+    "uk": "ukrainian",
+    "vi": "vietnamese",
+    "zh": "chinese",
+}
+
+
+def _language_matches(result_language: str | None, requested: str) -> bool:
+    """Match a Bazarr language name against a requested code or name."""
+    if not result_language:
+        return False
+    result = str(result_language).strip().lower()
+    wanted = requested.strip().lower()
+    if not wanted:
+        return True
+    if result == wanted or result.startswith(wanted):
+        return True
+    mapped = _SUBTITLE_LANGUAGE_NAMES.get(wanted)
+    return bool(mapped) and (result == mapped or result.startswith(mapped))
+
 
 class BazarrClient:
     def __init__(
@@ -65,6 +127,8 @@ class BazarrClient:
         client = await self._ensure_client()
         resp = await client.post(path, params=params)
         resp.raise_for_status()
+        if resp.status_code == 204 or not resp.content:
+            return {"success": True}
         return resp.json()
 
     # ── system ────────────────────────────────────────────────────
@@ -86,7 +150,22 @@ class BazarrClient:
         return await self._get("/api/series")  # type: ignore[return-value]
 
     async def get_episodes(self, series_id: int) -> list[dict[str, Any]]:
-        return await self._get("/api/episodes", seriesId=series_id)  # type: ignore[return-value]
+        data = await self._get("/api/episodes", **{"seriesid[]": [series_id]})
+        if isinstance(data, dict) and "data" in data:
+            return data["data"]  # type: ignore[return-value]
+        return data  # type: ignore[return-value]
+
+    async def get_series_id_for_episode(self, episode_id: int) -> int | None:
+        """Resolve the Sonarr series id that owns ``episode_id``.
+
+        Bazarr's ``/api/episodes`` accepts an ``episodeid[]`` filter and
+        returns ``sonarrSeriesId`` alongside each episode's metadata.
+        """
+        data = await self._get("/api/episodes", **{"episodeid[]": [episode_id]})
+        entries = data.get("data", []) if isinstance(data, dict) else data or []
+        if entries:
+            return entries[0].get("sonarrSeriesId")
+        return None
 
     # ── wanted (missing subtitles) ────────────────────────────────
 
@@ -110,14 +189,24 @@ class BazarrClient:
         movie_id: int | None = None,
         language: str | None = None,
     ) -> list[dict[str, Any]]:
-        params: dict[str, Any] = {}
-        if episode_id:
-            params["episodeId"] = episode_id
+        """Search providers for subtitles of an episode or movie.
+
+        Bazarr exposes manual search on the provider namespace:
+        ``/api/providers/episodes?episodeid=`` for episodes and
+        ``/api/providers/movies?radarrid=`` for movies.  Neither endpoint
+        accepts a language filter, so ``language`` is applied client-side.
+        """
         if movie_id:
-            params["movieId"] = movie_id
+            data = await self._get("/api/providers/movies", radarrid=movie_id)
+        elif episode_id:
+            data = await self._get("/api/providers/episodes", episodeid=episode_id)
+        else:
+            return []
+
+        results = data.get("data", []) if isinstance(data, dict) else data or []
         if language:
-            params["language"] = language
-        return await self._get("/api/subtitles", **params)  # type: ignore[return-value]
+            results = [r for r in results if _language_matches(r.get("language"), language)]
+        return results  # type: ignore[return-value]
 
     async def download_subtitle(
         self,
@@ -128,20 +217,38 @@ class BazarrClient:
         provider: str | None = None,
         scene_name: str | None = None,
     ) -> dict[str, Any]:
+        """Download a specific subtitle returned by :meth:`search_subtitles`.
+
+        ``subtitle_path`` is the ``subtitle`` identifier from the search
+        results.  Bazarr also requires ``hi``, ``forced`` and
+        ``original_format`` for manual downloads; these default to "False"
+        when not supplied.  Episode downloads additionally require the Sonarr
+        series id, which is resolved from ``/api/episodes``.
+        """
         params: dict[str, Any] = {
+            "hi": "False",
+            "forced": "False",
+            "original_format": "False",
+            "provider": provider or "",
             "subtitle": subtitle_path,
         }
-        if episode_id:
-            params["episodeId"] = episode_id
+
         if movie_id:
-            params["movieId"] = movie_id
-        if language:
-            params["language"] = language
-        if provider:
-            params["provider"] = provider
-        if scene_name:
-            params["sceneName"] = scene_name
-        return await self._post("/api/subtitles", **params)  # type: ignore[return-value]
+            params["radarrid"] = movie_id
+            return await self._post("/api/providers/movies", **params)
+
+        if episode_id:
+            series_id = await self.get_series_id_for_episode(episode_id)
+            if not series_id:
+                return {
+                    "success": False,
+                    "error": f"Unable to resolve series id for episode {episode_id}",
+                }
+            params["seriesid"] = series_id
+            params["episodeid"] = episode_id
+            return await self._post("/api/providers/episodes", **params)
+
+        return {"success": False, "error": "episode_id or movie_id is required"}
 
     # ── history ───────────────────────────────────────────────────
 
