@@ -110,6 +110,8 @@ class BaseArrClient:
         else:
             resp = await client.delete(path, params=params)
         resp.raise_for_status()
+        if resp.status_code == 204 or not resp.content:
+            return {"success": True}
         return resp.json()
 
     # ── API info ──────────────────────────────────────────────────
