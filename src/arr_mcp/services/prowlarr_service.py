@@ -132,6 +132,32 @@ class ProwlarrClient(BaseArrClient):
     async def get_indexer_stats(self) -> dict[str, Any]:
         return await self._get(f"{self.api_path}/indexerstats")  # type: ignore[return-value]
 
+    # ── disk / queue / wanted (not available in Prowlarr API) ────────
+
+    async def get_diskspace(self) -> list[dict[str, Any]]:
+        """Prowlarr does not expose disk space endpoints; returns empty list."""
+        return []
+
+    async def get_queue(
+        self,
+        page: int = 1,
+        page_size: int = 20,
+        include_unknown: bool = True,
+    ) -> dict[str, Any]:
+        """Prowlarr does not expose a queue endpoint; returns empty queue structure."""
+        return {"records": [], "totalRecords": 0, "page": page}
+
+    async def get_wanted_missing(
+        self,
+        page: int = 1,
+        page_size: int = 20,
+        sort_key: str = "title",
+        sort_direction: str = "ascending",
+        monitored: bool = True,
+    ) -> dict[str, Any]:
+        """Prowlarr does not expose wanted/missing endpoints; returns empty structure."""
+        return {"records": [], "totalRecords": 0, "page": page}
+
     # ── notifications schema ──────────────────────────────────────
 
     async def get_notification_schema(self) -> list[dict[str, Any]]:

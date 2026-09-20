@@ -153,9 +153,22 @@ class BazarrClient:
         sort_direction: str = "descending",
     ) -> dict[str, Any]:
         """Get subtitle download history with pagination support."""
-        records = await self._get("/api/history")  # type: ignore[return-value]
-        if isinstance(records, list):
-            # Wrap list response in dict format expected by cross_arr_tools
+        params: dict[str, Any] = {
+            "start": (page - 1) * page_size,
+            "length": page_size,
+            "order[0][column]": "0" if sort_key == "time" else "1",
+            "order[0][dir]": sort_direction.upper(),
+        }
+        records = await self._get("/api/episodes/history", **params)  # type: ignore[return-value]
+        if isinstance(records, dict) and "data" in records:
+            # Handle DataTables format response
+            return {
+                "records": records.get("data", []),
+                "totalRecords": records.get("recordsTotal", 0),
+                "page": page,
+            }
+        elif isinstance(records, list):
+            # Handle direct array response
             return {
                 "records": records[:page_size],
                 "totalRecords": len(records),
@@ -197,4 +210,5 @@ class BazarrClient:
     # ── languages ─────────────────────────────────────────────────
 
     async def get_languages(self) -> list[dict[str, Any]]:
-        return await self._get("/api/languages")  # type: ignore[return-value]
+        """Bazarr does not expose a languages endpoint; returns empty list."""
+        return []
