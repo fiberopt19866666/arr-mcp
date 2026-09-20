@@ -57,7 +57,7 @@ class ProwlarrClient(BaseArrClient):
         return await self._post(f"{self.api_path}/indexer/test", json=indexer)
 
     async def test_all_indexers(self) -> dict[str, Any]:
-        return await self._post(f"{self.api_path}/indexer/testall")
+        return await self._get(f"{self.api_path}/indexer/testall")  # type: ignore[return-value]
 
     async def get_indexer_schema(self) -> list[dict[str, Any]]:
         return await self._get(f"{self.api_path}/indexer/schema")  # type: ignore[return-value]

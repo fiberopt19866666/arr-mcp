@@ -88,6 +88,10 @@ class OverseerrClient:
     async def get_status_appdata(self) -> dict[str, Any]:
         return await self._get("/api/v1/status/appdata")  # type: ignore[return-value]
 
+    async def get_system_status(self) -> dict[str, Any]:
+        """Alias for health_check compatibility with BaseArrClient interface."""
+        return await self.get_status()
+
     async def health_check(self) -> dict[str, Any]:
         return await self.get_status()
 
@@ -198,3 +202,39 @@ class OverseerrClient:
 
     async def get_settings_plex(self) -> dict[str, Any]:
         return await self._get("/api/v1/settings/plex")  # type: ignore[return-value]
+
+    # ── queue / disk / history / wanted (not natively supported by Overseerr) ──
+
+    async def get_diskspace(self) -> list[dict[str, Any]]:
+        """Overseerr does not expose disk space endpoints; returns empty list."""
+        return []
+
+    async def get_queue(
+        self,
+        page: int = 1,
+        page_size: int = 20,
+        include_unknown: bool = True,
+    ) -> dict[str, Any]:
+        """Overseerr does not expose a queue endpoint; returns empty queue structure."""
+        return {"records": [], "totalRecords": 0, "page": page}
+
+    async def get_history(
+        self,
+        page: int = 1,
+        page_size: int = 20,
+        sort_key: str = "date",
+        sort_direction: str = "descending",
+    ) -> dict[str, Any]:
+        """Overseerr does not expose history endpoints; returns empty history structure."""
+        return {"records": [], "totalRecords": 0, "page": page}
+
+    async def get_wanted_missing(
+        self,
+        page: int = 1,
+        page_size: int = 20,
+        sort_key: str = "title",
+        sort_direction: str = "ascending",
+        monitored: bool = True,
+    ) -> dict[str, Any]:
+        """Overseerr does not expose wanted/missing endpoints; returns empty structure."""
+        return {"records": [], "totalRecords": 0, "page": page}

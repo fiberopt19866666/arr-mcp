@@ -86,7 +86,7 @@ class BazarrClient:
         return await self._get("/api/series")  # type: ignore[return-value]
 
     async def get_episodes(self, series_id: int) -> list[dict[str, Any]]:
-        return await self._get("/api/episodes", seriesid=series_id)  # type: ignore[return-value]
+        return await self._get("/api/episodes", seriesId=series_id)  # type: ignore[return-value]
 
     # ── wanted (missing subtitles) ────────────────────────────────
 
@@ -112,9 +112,9 @@ class BazarrClient:
     ) -> list[dict[str, Any]]:
         params: dict[str, Any] = {}
         if episode_id:
-            params["episodeid"] = episode_id
+            params["episodeId"] = episode_id
         if movie_id:
-            params["movieid"] = movie_id
+            params["movieId"] = movie_id
         if language:
             params["language"] = language
         return await self._get("/api/subtitles", **params)  # type: ignore[return-value]
@@ -132,26 +132,67 @@ class BazarrClient:
             "subtitle": subtitle_path,
         }
         if episode_id:
-            params["episodeid"] = episode_id
+            params["episodeId"] = episode_id
         if movie_id:
-            params["movieid"] = movie_id
+            params["movieId"] = movie_id
         if language:
             params["language"] = language
         if provider:
             params["provider"] = provider
         if scene_name:
-            params["scenename"] = scene_name
+            params["sceneName"] = scene_name
         return await self._post("/api/subtitles", **params)  # type: ignore[return-value]
 
     # ── history ───────────────────────────────────────────────────
 
-    async def get_history(self) -> list[dict[str, Any]]:
-        return await self._get("/api/history")  # type: ignore[return-value]
+    async def get_history(
+        self,
+        page: int = 1,
+        page_size: int = 50,
+        sort_key: str = "time",
+        sort_direction: str = "descending",
+    ) -> dict[str, Any]:
+        """Get subtitle download history with pagination support."""
+        records = await self._get("/api/history")  # type: ignore[return-value]
+        if isinstance(records, list):
+            # Wrap list response in dict format expected by cross_arr_tools
+            return {
+                "records": records[:page_size],
+                "totalRecords": len(records),
+                "page": page,
+            }
+        return records
 
     # ── providers ─────────────────────────────────────────────────
 
     async def get_providers(self) -> list[dict[str, Any]]:
         return await self._get("/api/providers")  # type: ignore[return-value]
+
+    # ── disk / queue / wanted (not natively supported by Bazarr) ─────
+
+    async def get_diskspace(self) -> list[dict[str, Any]]:
+        """Bazarr does not expose disk space endpoints; returns empty list."""
+        return []
+
+    async def get_queue(
+        self,
+        page: int = 1,
+        page_size: int = 20,
+        include_unknown: bool = True,
+    ) -> dict[str, Any]:
+        """Bazarr does not expose a queue endpoint; returns empty queue structure."""
+        return {"records": [], "totalRecords": 0, "page": page}
+
+    async def get_wanted_missing(
+        self,
+        page: int = 1,
+        page_size: int = 20,
+        sort_key: str = "title",
+        sort_direction: str = "ascending",
+        monitored: bool = True,
+    ) -> dict[str, Any]:
+        """Bazarr does not expose wanted/missing endpoints; returns empty structure."""
+        return {"records": [], "totalRecords": 0, "page": page}
 
     # ── languages ─────────────────────────────────────────────────
 
