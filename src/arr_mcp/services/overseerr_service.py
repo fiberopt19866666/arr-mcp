@@ -72,10 +72,12 @@ class OverseerrClient:
         resp.raise_for_status()
         return resp.json()
 
-    async def _delete(self, path: str, **params: Any) -> Any:
+    async def _delete(self, path: str, **params: Any) -> dict[str, Any]:
         client = await self._ensure_client()
         resp = await client.delete(path, params=params)
         resp.raise_for_status()
+        if resp.status_code == 204 or not resp.content:
+            return {"success": True}
         return resp.json()
 
     # ── status ────────────────────────────────────────────────────
@@ -133,11 +135,16 @@ class OverseerrClient:
             payload["seasons"] = seasons
         return await self._post("/api/v1/request", json=payload)
 
+    async def _update_request_status(self, request_id: int, status: str) -> dict[str, Any]:
+        return await self._post(
+            f"/api/v1/request/{request_id}/{status}"
+        )  # type: ignore[return-value]
+
     async def approve_request(self, request_id: int) -> dict[str, Any]:
-        return await self._post(f"/api/v1/request/{request_id}/approve")
+        return await self._update_request_status(request_id, "approve")
 
     async def decline_request(self, request_id: int) -> dict[str, Any]:
-        return await self._post(f"/api/v1/request/{request_id}/decline")
+        return await self._update_request_status(request_id, "decline")
 
     async def delete_request(self, request_id: int) -> dict[str, Any]:
         return await self._delete(f"/api/v1/request/{request_id}")  # type: ignore[return-value]
@@ -191,6 +198,3 @@ class OverseerrClient:
 
     async def get_settings_plex(self) -> dict[str, Any]:
         return await self._get("/api/v1/settings/plex")  # type: ignore[return-value]
-
-    async def get_settings_jellyfin(self) -> dict[str, Any]:
-        return await self._get("/api/v1/settings/jellyfin")  # type: ignore[return-value]
