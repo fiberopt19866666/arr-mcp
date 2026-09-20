@@ -1,4 +1,4 @@
-# arr-mcpp
+# arr-mcp
 
 <p align="center">
   <a href="https://github.com/sandraschi/arr-mcp"><img src="https://img.shields.io/github/stars/sandraschi/arr-mcp?style=flat-square" alt="Stars"></a>
