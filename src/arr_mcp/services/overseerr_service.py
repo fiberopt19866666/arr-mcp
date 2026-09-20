@@ -107,7 +107,7 @@ class OverseerrClient:
             "/api/v1/request",
             take=take,
             skip=skip,
-            request_filter=request_filter,
+            filter=request_filter,
             sort=sort,
         )
 
