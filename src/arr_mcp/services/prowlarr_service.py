@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from typing import Any
 
+import httpx
+
 from arr_mcp.constants import DEFAULT_TIMEOUT, PROWLARR_API_PATH
 from arr_mcp.services.base import BaseArrClient, build_cloudflare_access_auth
 
@@ -47,7 +49,15 @@ class ProwlarrClient(BaseArrClient):
         return await self._post(f"{self.api_path}/indexer", json=fields)
 
     async def update_indexer(self, indexer_id: int, **fields: Any) -> dict[str, Any]:
-        return await self._put(f"{self.api_path}/indexer/{indexer_id}", json=fields)
+        """Merge ``fields`` into the stored indexer and PUT the full resource.
+
+        Prowlarr's ``PUT /api/v1/indexer/{id}`` validates the whole indexer
+        resource, so a partial payload is rejected with 400.  Fetch the
+        existing indexer first (same pattern as the other *arr update methods).
+        """
+        indexer = await self.get_indexer(indexer_id)
+        indexer.update(fields)
+        return await self._put(f"{self.api_path}/indexer/{indexer_id}", json=indexer)
 
     async def delete_indexer(self, indexer_id: int) -> dict[str, Any]:
         return await self._delete(f"{self.api_path}/indexer/{indexer_id}")  # type: ignore[return-value]
@@ -57,7 +67,22 @@ class ProwlarrClient(BaseArrClient):
         return await self._post(f"{self.api_path}/indexer/test", json=indexer)
 
     async def test_all_indexers(self) -> dict[str, Any]:
-        return await self._post(f"{self.api_path}/indexer/testall")  # type: ignore[return-value]
+        """Test every enabled indexer.
+
+        Prowlarr answers ``POST /api/v1/indexer/testall`` with HTTP **400**
+        whenever at least one indexer fails validation, while still returning
+        the per-indexer result array in the body.  Surface that body instead of
+        treating the response as a hard failure.
+        """
+        try:
+            return await self._post(f"{self.api_path}/indexer/testall")  # type: ignore[return-value]
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code == 400:
+                try:
+                    return exc.response.json()  # type: ignore[return-value]
+                except ValueError:
+                    pass
+            raise
 
     async def get_indexer_schema(self) -> list[dict[str, Any]]:
         return await self._get(f"{self.api_path}/indexer/schema")  # type: ignore[return-value]
@@ -94,12 +119,18 @@ class ProwlarrClient(BaseArrClient):
         return await self._get(f"{self.api_path}/applications/{app_id}")  # type: ignore[return-value]
 
     async def sync_application(self, app_id: int) -> dict[str, Any]:
-        """Sync indexers for a specific application (Radarr/Sonarr/Lidarr)."""
-        return await self._post(f"{self.api_path}/applications/{app_id}/sync")
+        """Push indexers to the connected applications.
+
+        Prowlarr exposes no per-application sync route (``/applications/{id}/sync``
+        returns 405).  Syncing is performed by the ``ApplicationIndexerSync``
+        command, which pushes indexers to every enabled application — including
+        ``app_id``.
+        """
+        return await self.trigger_command("ApplicationIndexerSync", forceSync=True)
 
     async def sync_all_applications(self) -> dict[str, Any]:
-        """Trigger full indexer sync across all connected applications."""
-        return await self._post(f"{self.api_path}/applications/syncall")
+        """Push indexers to every enabled application via the sync command."""
+        return await self.trigger_command("ApplicationIndexerSync", forceSync=True)
 
     async def test_application(self, app_id: int) -> dict[str, Any]:
         app = await self.get_application(app_id)
